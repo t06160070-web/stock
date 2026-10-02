@@ -72,9 +72,9 @@
         loadDataFromStorage();
     });
 
-    // 1. 初始化手機介面 (修正容器對引問題)
+    // 1. 初始化手機介面
     function initUI() {
-        const mainContainer = document.getElementById('storage-grid-container');
+        const gridContainer = document.getElementById('storage-grid-container');
         const selectBin = document.getElementById('select-bin');
         
         binIds.forEach(id => {
@@ -90,9 +90,9 @@
                 <div class="bin-title">📍 儲位：${id}</div>
                 <div id="list-${id}" class="list-group"></div>
             `;
-            mainContainer.appendChild(binDiv);
+            gridContainer.appendChild(binDiv);
 
-            // 綁定 SortableJS，啟動手機觸控滑動支援
+            // 重點：綁定 SortableJS，啟動手機觸控滑動支援
             new Sortable(document.getElementById(`list-${id}`), {
                 group: 'shared-storage-board', // 群組名稱相同即可互相拉動
                 animation: 150,                // 拖曳流暢動畫
@@ -149,14 +149,12 @@
         const currentData = {};
         binIds.forEach(binId => {
             const container = document.getElementById(`list-${binId}`);
-            if (container) {
-                const items = [...container.querySelectorAll('.material-item')];
-                currentData[binId] = items.map(item => ({
-                    id: item.id,
-                    part: item.getAttribute('data-part'),
-                    qty: item.getAttribute('data-qty')
-                }));
-            }
+            const items = [...container.querySelectorAll('.material-item')];
+            currentData[binId] = items.map(item => ({
+                id: item.id,
+                part: item.getAttribute('data-part'),
+                qty: item.getAttribute('data-qty')
+            }));
         });
         localStorage.setItem('panel_mobile_db', JSON.stringify(currentData));
     }
@@ -166,22 +164,17 @@
         const savedDataStr = localStorage.getItem('panel_mobile_db');
         if (!savedDataStr) {
             // 第一次打開網頁，預設塞入範例提供測試
-            const target = document.getElementById('list-D2D101');
-            if (target) {
-                target.appendChild(createMaterialElement('m_s1', '702ST9-A板', '12'));
-                target.appendChild(createMaterialElement('m_s2', '702ST9-B板', '8'));
-            }
+            document.getElementById('list-D2D101').appendChild(createMaterialElement('m_s1', '702ST9-A板', '12'));
+            document.getElementById('list-D2D101').appendChild(createMaterialElement('m_s2', '702ST9-B板', '8'));
             return;
         }
         const data = JSON.parse(savedDataStr);
         binIds.forEach(binId => {
             const container = document.getElementById(`list-${binId}`);
-            if (container) {
-                const itemsData = data[binId] || [];
-                itemsData.forEach(itemData => {
-                    container.appendChild(createMaterialElement(itemData.id, itemData.part, itemData.qty));
-                });
-            }
+            const itemsData = data[binId] || [];
+            itemsData.forEach(itemData => {
+                container.appendChild(createMaterialElement(itemData.id, itemData.part, itemData.qty));
+            });
         });
     }
 </script>
