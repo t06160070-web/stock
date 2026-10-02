@@ -1,1 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>系統板材儲位疊板管理</title>
+    <style>
+        .storage-container {
+            display: flex;
+            gap: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .storage-bin {
+            flex: 1;
+            min-height: 300px;
+            background-color: #f4f5f7;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            transition: background-color 0.2s;
+        }
+        /* 當物件拖曳到儲位上方時的視覺提示 */
+        .storage-bin.drag-over {
+            background-color: #e0f2fe;
+            border-color: #3b82f6;
+        }
+        .bin-title {
+            margin-top: 0;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 8px;
+            color: #333;
+        }
+        .material-item {
+            background-color: #ffffff;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: grab;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            user-select: none;
+        }
+        .material-item:active {
+            cursor: grabbing;
+        }
+        /* 被拖曳中的元素樣式 */
+        .material-item.dragging {
+            opacity: 0.4;
+            background-color: #ebebeb;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>系統板材儲位移轉作業 (疊板管理)</h2>
+    <p>💡 提示：可將板材在兩個儲位間互相拉動，也可在同儲位內上下拖曳調整堆疊順序（最上方為最上層）。</p>
+
+    <div class="storage-container">
+        <!-- 儲位 A -->
+        <div class="storage-bin" id="bin-A" data-max-size="8">
+            <h3 class="bin-title">儲位 A (最大容納 8 尺板材)</h3>
+            <div class="material-item" id="mat-101" draggable="true" data-size="6">板材 #101 (6尺塑合板)</div>
+            <div class="material-item" id="mat-102" draggable="true" data-size="8">板材 #102 (8尺密迪板)</div>
+        </div>
+
+        <!-- 儲位 B -->
+        <div class="storage-bin" id="bin-B" data-max-size="6">
+            <h3 class="bin-title">儲位 B (限 6 尺以下板材)</h3>
+            <div class="material-item" id="mat-103" draggable="true" data-size="6">板材 #103 (6尺實木板)</div>
+        </div>
+    </div>
+
+<script>
+    // 取得所有儲位與板材元件
+    const bins = document.querySelectorAll('.storage-bin');
+    const items = document.querySelectorAll('.material-item');
+
+    let draggedItem = null;
+
+    // 1. 為所有板材綁定拖曳事件
+    items.forEach(item => {
+        item.addEventListener('dragstart', (e) => {
+            draggedItem = item;
+            item.classList.add('dragging');
+            // 將識別 ID 存入 dataTransfer
+            e.dataTransfer.setData('text/plain', item.id);
+        });
+
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+            draggedItem = null;
+            // 移除所有儲位的特定樣式
+            bins.forEach(bin => bin.classList.remove('drag-over'));
+        });
+    });
+
+    // 2. 為儲位容器綁定放置事件
+    bins.forEach(bin => {
+        // 必須阻擋預設行為，否則 drop 事件不會觸發
+        bin.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            bin.classList.add('drag-over');
+
+            // 實作精細排序：計算目前滑鼠在儲位中哪兩個元件之間
+            const afterElement = getDragAfterElement(bin, e.clientY);
+            if (afterElement == null) {
+                // 如果下面沒有元件，就放到最後面（最下層）
+                bin.appendChild(draggedItem);
+            } else {
+                // 否則插到該元件的前面（上層）
+                bin.insertBefore(draggedItem, afterElement);
+            }
+        });
+
+        bin.addEventListener('dragleave', () => {
+            bin.classList.remove('drag-over');
+        });
+
+        bin.addEventListener('drop', (e) => {
+            e.preventDefault();
+            bin.classList.remove('drag-over');
+
+            // 【防呆機制範例】檢查儲位規格限制
+            const maxAllowedSize = parseInt(bin.getAttribute('data-max-size'));
+            const itemSize = parseInt(draggedItem.getAttribute('data-size'));
+
+            if (itemSize > maxAllowedSize) {
+                alert(`⚠️ 移轉失敗：此板材尺寸 (${itemSize}尺) 超過該儲位限制 (${maxAllowedSize}尺)！`);
+                // 重新整理網頁或將 DOM 復原（此範例因 dragover 已移過去，可重新整理或用記憶位置復原）
+                location.reload(); 
+                return;
+            }
+
+            // 成功落位後，撈取該儲位最新的堆疊順序
+            const updatedOrder = Array.from(bin.querySelectorAll('.material-item')).map(el => el.id);
+            
+            // 觸發後端 API 更新
+            saveToBackend(draggedItem.id, bin.id, updatedOrder);
+        });
+    });
+
+    /**
+     * 核心演算法：計算滑鼠當前位置應該插入在哪個 DOM 元素之前
+     */
+    function getDragAfterElement(bin, y) {
+        // 撈出儲位內所有「沒被拖曳」的板材
+        const draggableElements = [...bin.querySelectorAll('.material-item:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            // 計算滑鼠 Y 軸與元件中心點的距離
+            const offset = y - box.top - box.height / 2;
+            
+            // offset < 0 代表滑鼠在該元件上方
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    /**
+     * 模擬將結果儲存至後端資料庫
+     */
+    function saveToBackend(itemId, targetBinId, currentStackOrder) {
+        console.log(`【API 請求】板材 ${itemId} 已成功移至 ${targetBinId}`);
+        console.log(`【最新堆疊順序】`, currentStackOrder);
+        // 實務上這裡會用 fetch() 發送 POST/PUT 請求給您的 API
+    }
+</script>
+
+</body>
+</html>
 
