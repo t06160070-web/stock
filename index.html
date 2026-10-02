@@ -2,153 +2,179 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>系統板材儲位疊板管理系統</title>
+    <!-- 行動裝置優化縮放 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
+    <title>手機版-系統板材儲位管理</title>
+    <!-- 引入支援手機觸控的拖曳核心套件 -->
+    <script src="https://jsdelivr.net"></script>
     <style>
-        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
-        h2 { color: #1a365d; margin-bottom: 5px; }
-        .hint { color: #666; font-size: 14px; margin-bottom: 20px; }
-        .form-panel { background-color: #ffffff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 25px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-        .form-group { display: flex; align-items: center; gap: 8px; }
-        .form-group label { font-weight: bold; color: #4a5568; }
-        .form-group input, .form-group select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; }
-        .btn-add { background-color: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
-        .btn-add:hover { background-color: #1d4ed8; }
-        .storage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
-        .storage-bin { background-color: #ffffff; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 12px; min-height: 250px; display: flex; flex-direction: column; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        .storage-bin.drag-over { background-color: #eff6ff; border-color: #3b82f6; transform: scale(1.01); }
-        .bin-title { margin: 0 0 10px 0; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; color: #2d3748; font-size: 16px; text-align: center; }
-        .material-item { background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 5px solid #3b82f6; border-radius: 4px; padding: 10px; margin-bottom: 8px; cursor: grab; user-select: none; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .material-item:active { cursor: grabbing; }
-        .material-item.dragging { opacity: 0.4; background-color: #e2e8f0; }
-        .item-info { font-size: 14px; font-weight: 500; color: #334155; }
-        .btn-delete { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 0 4px; }
-        .btn-delete:hover { font-weight: bold; }
+        body { font-family: "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 15px; -webkit-tap-highlight-color: transparent; }
+        h2 { color: #1e3a8a; font-size: 20px; margin: 5px 0; text-align: center; }
+        .hint { color: #6b7280; font-size: 13px; text-align: center; margin-bottom: 15px; }
+        
+        /* 表單區域優化：手機滿版與大按鈕 */
+        .form-panel { background-color: #ffffff; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .form-row { display: flex; gap: 10px; }
+        .form-group { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-weight: bold; color: #4b5563; font-size: 14px; }
+        .form-group input, .form-group select { padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; -webkit-appearance: none; background-color: #fff; }
+        .btn-add { background-color: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 5px; transition: background 0.2s; }
+        
+        /* 儲位排版：手機上單欄排列 */
+        .storage-grid { display: flex; flex-direction: column; gap: 15px; }
+        
+        /* 個別儲位手機優化 */
+        .storage-bin { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; min-height: 100px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .bin-title { margin: 0 0 10px 0; padding-bottom: 8px; border-bottom: 2px solid #f3f4f6; color: #1f2937; font-size: 16px; font-weight: bold; }
+        
+        /* 拖曳清單容器：確保沒料號時也有空間可以讓手指點擊丟入 */
+        .list-group { min-height: 50px; display: flex; flex-direction: column; gap: 8px; }
+
+        /* 料號板材元件手機優化：增加高度、大字體、方便手指點擊 */
+        .material-item { background-color: #f9fafb; border: 1px solid #e5e7eb; border-left: 6px solid #2563eb; border-radius: 8px; padding: 14px 12px; cursor: grab; user-select: none; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); touch-action: none; }
+        .item-info { font-size: 15px; font-weight: 600; color: #374151; }
+        .btn-delete { background: #fee2e2; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 6px 10px; border-radius: 6px; font-weight: bold; }
+        
+        /* SortableJS 拖曳時的鏡像與暫存樣式 */
+        .sortable-ghost { opacity: 0.3; background-color: #dbeafe !important; border: 1px dashed #2563eb; }
+        .sortable-chosen { background-color: #eff6ff; }
     </style>
 </head>
 <body>
 
-    <h2>🧱 系統板材儲位疊板管理</h2>
-    <p class="hint">💡 提示：您可以新增板材料號，並在 10 個儲位間「任意拖曳互換」或「上下調整堆疊順序」。資料會自動儲存在您的瀏覽器中。</p>
+    <h2>🧱 系統板材儲位疊板管理 (手機版)</h2>
+    <p class="hint">💡 提示：用手指「按住料號」即可在儲位間上下排序或跨儲位互相拉動，離開網頁會自動存檔。</p>
 
     <div class="form-panel">
-        <div class="form-group">
-            <label for="input-part">料號：</label>
-            <input type="text" id="input-part" value="702ST9" placeholder="請輸入料號">
+        <div class="form-row">
+            <div class="form-group">
+                <label>料號</label>
+                <input type="text" id="input-part" value="702ST9">
+            </div>
+            <div class="form-group" style="flex: 0 0 90px;">
+                <label>數量</label>
+                <input type="number" id="input-qty" value="10" min="1">
+            </div>
         </div>
         <div class="form-group">
-            <label for="input-qty">數量：</label>
-            <input type="number" id="input-qty" value="10" min="1" style="width: 70px;">
-        </div>
-        <div class="form-group">
-            <label for="select-bin">初始儲位：</label>
+            <label>初始儲位</label>
             <select id="select-bin"></select>
         </div>
-        <button class="btn-add" onclick="addNewMaterial()">➕ 新增至儲位</button>
+        <button class="btn-add" onclick="addNewMaterial()">➕ 新增板材至儲位</button>
     </div>
 
     <div class="storage-grid" id="storage-grid-container"></div>
 <script>
     const binIds = ['D2D101', 'D2D102', 'D2D103', 'D2D104', 'D2D105', 'D2D106', 'D2D107', 'D2D108', 'D2D109', 'D2D110'];
-    let draggedItem = null;
 
     window.addEventListener('DOMContentLoaded', () => {
         initUI();
         loadDataFromStorage();
     });
 
+    // 1. 初始化手機介面
     function initUI() {
         const gridContainer = document.getElementById('storage-grid-container');
         const selectBin = document.getElementById('select-bin');
+        
         binIds.forEach(id => {
+            // 生成下拉選單
             const option = document.createElement('option');
             option.value = id; option.textContent = id;
             selectBin.appendChild(option);
 
+            // 生成 10 個儲位區塊
             const binDiv = document.createElement('div');
-            binDiv.className = 'storage-bin'; binDiv.id = id;
-            binDiv.innerHTML = `<h3 class="bin-title">📍 ${id}</h3>`;
-            binDiv.addEventListener('dragover', handleDragOver);
-            binDiv.addEventListener('dragleave', handleDragLeave);
-            binDiv.addEventListener('drop', handleDrop);
+            binDiv.className = 'storage-bin';
+            binDiv.innerHTML = `
+                <div class="bin-title">📍 儲位：${id}</div>
+                <div id="list-${id}" class="list-group"></div>
+            `;
             gridContainer.appendChild(binDiv);
+
+            // 重點：綁定 SortableJS，啟動手機觸控滑動支援
+            new Sortable(document.getElementById(`list-${id}`), {
+                group: 'shared-storage-board', // 群組名稱相同即可互相拉動
+                animation: 150,                // 拖曳流暢動畫
+                ghostClass: 'sortable-ghost',  // 拖曳時原本位置的虛線樣式
+                chosenClass: 'sortable-chosen',// 手機按住時的視覺回饋
+                forceFallback: false,          // 使用原生觸控
+                fallbackTolerance: 3,          // 手機防誤觸：手指移動超過 3 像素才判定為拖曳，方便正常滑動網頁
+                onEnd: function () {
+                    saveDataToStorage();       // 任一儲位排序或搬移結束，立刻自動存檔
+                }
+            });
         });
     }
 
+    // 2. 建立板材 DOM 元素
     function createMaterialElement(id, partNo, qty) {
         const itemDiv = document.createElement('div');
-        itemDiv.className = 'material-item'; itemDiv.id = id; itemDiv.draggable = true;
-        itemDiv.setAttribute('data-part', partNo); itemDiv.setAttribute('data-qty', qty);
+        itemDiv.className = 'material-item';
+        itemDiv.id = id;
+        itemDiv.setAttribute('data-part', partNo);
+        itemDiv.setAttribute('data-qty', qty);
         itemDiv.innerHTML = `
-            <span class="item-info">${partNo} (數量: ${qty})</span>
-            <button class="btn-delete" onclick="deleteItem('${id}')">❌</button>
+            <span class="item-info">📦 ${partNo} <span style="color:#2563eb; margin-left:5px;">(${qty}片)</span></span>
+            <button class="btn-delete" onclick="deleteItem('${id}')">刪除</button>
         `;
-        itemDiv.addEventListener('dragstart', (e) => {
-            draggedItem = itemDiv; itemDiv.classList.add('dragging');
-            e.dataTransfer.setData('text/plain', id);
-        });
-        itemDiv.addEventListener('dragend', () => {
-            itemDiv.classList.remove('dragging'); draggedItem = null;
-            document.querySelectorAll('.storage-bin').forEach(b => b.classList.remove('drag-over'));
-        });
         return itemDiv;
     }
 
+    // 3. 手機版新增按鈕事件
     function addNewMaterial() {
         const partInput = document.getElementById('input-part').value.trim();
         const qtyInput = document.getElementById('input-qty').value.trim();
         const targetBinId = document.getElementById('select-bin').value;
-        if (!partInput || !qtyInput) { alert('請輸入完整的料號與數量！'); return; }
+        
+        if (!partInput || !qtyInput) { alert('請輸入完整資訊！'); return; }
+        
         const uniqueId = 'mat_' + Date.now();
         const newEl = createMaterialElement(uniqueId, partInput, qtyInput);
-        document.getElementById(targetBinId).appendChild(newEl);
+        
+        document.getElementById(`list-${targetBinId}`).appendChild(newEl);
         saveDataToStorage();
     }
 
+    // 4. 刪除按鈕項目
     function deleteItem(id) {
-        if(confirm('確定要移除此板材項目嗎？')) { document.getElementById(id).remove(); saveDataToStorage(); }
+        if(confirm('確定要移除此板材項目嗎？')) {
+            document.getElementById(id).remove();
+            saveDataToStorage();
+        }
     }
 
-    function handleDragOver(e) {
-        e.preventDefault(); const bin = e.currentTarget; bin.classList.add('drag-over');
-        const afterElement = getDragAfterElement(bin, e.clientY);
-        if (afterElement == null) { bin.appendChild(draggedItem); } else { bin.insertBefore(draggedItem, afterElement); }
-    }
-    function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
-    function handleDrop(e) { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); saveDataToStorage(); }
-
-    function getDragAfterElement(bin, y) {
-        const draggableElements = [...bin.querySelectorAll('.material-item:not(.dragging)')];
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } else { return closest; }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
+    // 5. 自動本地資料庫存檔 (LocalStorage)
     function saveDataToStorage() {
         const currentData = {};
         binIds.forEach(binId => {
-            const binEl = document.getElementById(binId);
-            const itemsInBin = [...binEl.querySelectorAll('.material-item')];
-            currentData[binId] = itemsInBin.map(item => ({
-                id: item.id, part: item.getAttribute('data-part'), qty: item.getAttribute('data-qty')
+            const container = document.getElementById(`list-${binId}`);
+            const items = [...container.querySelectorAll('.material-item')];
+            currentData[binId] = items.map(item => ({
+                id: item.id,
+                part: item.getAttribute('data-part'),
+                qty: item.getAttribute('data-qty')
             }));
         });
-        localStorage.setItem('panel_storage_db', JSON.stringify(currentData));
+        localStorage.setItem('panel_mobile_db', JSON.stringify(currentData));
     }
 
+    // 6. 讀取本地快取
     function loadDataFromStorage() {
-        const savedDataStr = localStorage.getItem('panel_storage_db');
+        const savedDataStr = localStorage.getItem('panel_mobile_db');
         if (!savedDataStr) {
-            document.getElementById('D2D101').appendChild(createMaterialElement('mat_sample1', '702ST9-範例A', '20'));
-            document.getElementById('D2D101').appendChild(createMaterialElement('mat_sample2', '702ST9-範例B', '15'));
+            // 第一次打開網頁，預設塞入範例提供測試
+            document.getElementById('list-D2D101').appendChild(createMaterialElement('m_s1', '702ST9-A板', '12'));
+            document.getElementById('list-D2D101').appendChild(createMaterialElement('m_s2', '702ST9-B板', '8'));
             return;
         }
         const data = JSON.parse(savedDataStr);
         binIds.forEach(binId => {
-            const binEl = document.getElementById(binId);
+            const container = document.getElementById(`list-${binId}`);
             const itemsData = data[binId] || [];
-            itemsData.forEach(itemData => { binEl.appendChild(createMaterialElement(itemData.id, itemData.part, itemData.qty)); });
+            itemsData.forEach(itemData => {
+                container.appendChild(createMaterialElement(itemData.id, itemData.part, itemData.qty));
+            });
         });
     }
 </script>
