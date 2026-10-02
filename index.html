@@ -2,48 +2,34 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <!-- 行動裝置優化縮放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
-    <title>手機版-系統板材儲位管理</title>
-    <!-- 引入支援手機觸控的拖曳核心套件 -->
+    <title>手機版-系統板材管理</title>
     <script src="https://jsdelivr.net"></script>
     <style>
-        body { font-family: "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 15px; -webkit-tap-highlight-color: transparent; }
-        h2 { color: #1e3a8a; font-size: 20px; margin: 5px 0; text-align: center; }
+        body { font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 15px; }
+        h2 { color: #1e3a8a; font-size: 20px; text-align: center; margin: 5px 0; }
         .hint { color: #6b7280; font-size: 13px; text-align: center; margin-bottom: 15px; }
-        
-        /* 表單區域優化：手機滿版與大按鈕 */
-        .form-panel { background-color: #ffffff; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .form-panel { background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
         .form-row { display: flex; gap: 10px; }
         .form-group { flex: 1; display: flex; flex-direction: column; gap: 4px; }
         .form-group label { font-weight: bold; color: #4b5563; font-size: 14px; }
-        .form-group input, .form-group select { padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; -webkit-appearance: none; background-color: #fff; }
-        .btn-add { background-color: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 5px; transition: background 0.2s; }
-        
-        /* 儲位排版：手機上單欄排列 */
+        .form-group input, .form-group select { padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; background: #fff; }
+        .btn-add { background: #2563eb; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
         .storage-grid { display: flex; flex-direction: column; gap: 15px; }
-        
-        /* 個別儲位手機優化 */
-        .storage-bin { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; min-height: 100px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .storage-bin { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .bin-title { margin: 0 0 10px 0; padding-bottom: 8px; border-bottom: 2px solid #f3f4f6; color: #1f2937; font-size: 16px; font-weight: bold; }
-        
-        /* 拖曳清單容器：確保沒料號時也有空間可以讓手指點擊丟入 */
-        .list-group { min-height: 50px; display: flex; flex-direction: column; gap: 8px; }
-
-        /* 料號板材元件手機優化：增加高度、大字體、方便手指點擊 */
-        .material-item { background-color: #f9fafb; border: 1px solid #e5e7eb; border-left: 6px solid #2563eb; border-radius: 8px; padding: 14px 12px; cursor: grab; user-select: none; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); touch-action: none; }
+        .list-group { min-height: 60px; display: flex; flex-direction: column; gap: 8px; background: #fafafa; border-radius: 6px; padding: 5px; }
+        .material-item { background: #fff; border: 1px solid #e5e7eb; border-left: 6px solid #2563eb; border-radius: 8px; padding: 14px 12px; user-select: none; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); touch-action: none; }
         .item-info { font-size: 15px; font-weight: 600; color: #374151; }
-        .btn-delete { background: #fee2e2; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 6px 10px; border-radius: 6px; font-weight: bold; }
-        
-        /* SortableJS 拖曳時的鏡像與暫存樣式 */
-        .sortable-ghost { opacity: 0.3; background-color: #dbeafe !important; border: 1px dashed #2563eb; }
-        .sortable-chosen { background-color: #eff6ff; }
+        .btn-delete { background: #fee2e2; border: none; color: #ef4444; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .sortable-ghost { opacity: 0.3; background: #dbeafe !important; border: 1px dashed #2563eb; }
+        .sortable-chosen { background: #eff6ff; }
     </style>
 </head>
 <body>
 
     <h2>🧱 系統板材儲位疊板管理 (手機版)</h2>
-    <p class="hint">💡 提示：用手指「按住料號」即可在儲位間上下排序或跨儲位互相拉動，離開網頁會自動存檔。</p>
+    <p class="hint">💡 提示：用手指「按住料號」即可在儲位間上下排序或跨儲位互相拉動。</p>
 
     <div class="form-panel">
         <div class="form-row">
@@ -64,115 +50,83 @@
     </div>
 
     <div class="storage-grid" id="storage-grid-container"></div>
+
 <script>
     const binIds = ['D2D101', 'D2D102', 'D2D103', 'D2D104', 'D2D105', 'D2D106', 'D2D107', 'D2D108', 'D2D109', 'D2D110'];
+    let dbName = 'panel_mobile_db_v2';
 
     window.addEventListener('DOMContentLoaded', () => {
-        initUI();
-        loadDataFromStorage();
-    });
-
-    // 1. 初始化手機介面
-    function initUI() {
-        const gridContainer = document.getElementById('storage-grid-container');
+        const mainContainer = document.getElementById('storage-grid-container');
         const selectBin = document.getElementById('select-bin');
         
+        // 單一迴圈建立所有儲位與選單，絕對不會出錯
         binIds.forEach(id => {
-            // 生成下拉選單
             const option = document.createElement('option');
             option.value = id; option.textContent = id;
             selectBin.appendChild(option);
 
-            // 生成 10 個儲位區塊
             const binDiv = document.createElement('div');
             binDiv.className = 'storage-bin';
-            binDiv.innerHTML = `
-                <div class="bin-title">📍 儲位：${id}</div>
-                <div id="list-${id}" class="list-group"></div>
-            `;
-            gridContainer.appendChild(binDiv);
+            binDiv.innerHTML = `<div class="bin-title">📍 儲位：${id}</div><div id="list-${id}" class="list-group"></div>`;
+            mainContainer.appendChild(binDiv);
 
-            // 重點：綁定 SortableJS，啟動手機觸控滑動支援
             new Sortable(document.getElementById(`list-${id}`), {
-                group: 'shared-storage-board', // 群組名稱相同即可互相拉動
-                animation: 150,                // 拖曳流暢動畫
-                ghostClass: 'sortable-ghost',  // 拖曳時原本位置的虛線樣式
-                chosenClass: 'sortable-chosen',// 手機按住時的視覺回饋
-                forceFallback: false,          // 使用原生觸控
-                fallbackTolerance: 3,          // 手機防誤觸：手指移動超過 3 像素才判定為拖曳，方便正常滑動網頁
-                onEnd: function () {
-                    saveDataToStorage();       // 任一儲位排序或搬移結束，立刻自動存檔
-                }
+                group: 'shared-storage-board',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                fallbackTolerance: 5, 
+                onEnd: saveDataToStorage
             });
         });
-    }
+        loadDataFromStorage();
+    });
 
-    // 2. 建立板材 DOM 元素
     function createMaterialElement(id, partNo, qty) {
         const itemDiv = document.createElement('div');
-        itemDiv.className = 'material-item';
-        itemDiv.id = id;
-        itemDiv.setAttribute('data-part', partNo);
-        itemDiv.setAttribute('data-qty', qty);
-        itemDiv.innerHTML = `
-            <span class="item-info">📦 ${partNo} <span style="color:#2563eb; margin-left:5px;">(${qty}片)</span></span>
-            <button class="btn-delete" onclick="deleteItem('${id}')">刪除</button>
-        `;
+        itemDiv.className = 'material-item'; itemDiv.id = id;
+        itemDiv.setAttribute('data-part', partNo); itemDiv.setAttribute('data-qty', qty);
+        itemDiv.innerHTML = `<span class="item-info">📦 ${partNo} <span style="color:#2563eb; margin-left:5px;">(${qty}片)</span></span><button class="btn-delete" onclick="deleteItem('${id}')">刪除</button>`;
         return itemDiv;
     }
 
-    // 3. 手機版新增按鈕事件
     function addNewMaterial() {
         const partInput = document.getElementById('input-part').value.trim();
         const qtyInput = document.getElementById('input-qty').value.trim();
         const targetBinId = document.getElementById('select-bin').value;
-        
         if (!partInput || !qtyInput) { alert('請輸入完整資訊！'); return; }
-        
         const uniqueId = 'mat_' + Date.now();
-        const newEl = createMaterialElement(uniqueId, partInput, qtyInput);
-        
-        document.getElementById(`list-${targetBinId}`).appendChild(newEl);
+        document.getElementById(`list-${targetBinId}`).appendChild(createMaterialElement(uniqueId, partInput, qtyInput));
         saveDataToStorage();
     }
 
-    // 4. 刪除按鈕項目
     function deleteItem(id) {
-        if(confirm('確定要移除此板材項目嗎？')) {
-            document.getElementById(id).remove();
-            saveDataToStorage();
-        }
+        if(confirm('確定要移除此板材項目嗎？')) { document.getElementById(id).remove(); saveDataToStorage(); }
     }
 
-    // 5. 自動本地資料庫存檔 (LocalStorage)
     function saveDataToStorage() {
         const currentData = {};
         binIds.forEach(binId => {
             const container = document.getElementById(`list-${binId}`);
             const items = [...container.querySelectorAll('.material-item')];
             currentData[binId] = items.map(item => ({
-                id: item.id,
-                part: item.getAttribute('data-part'),
-                qty: item.getAttribute('data-qty')
+                id: item.id, part: item.getAttribute('data-part'), qty: item.getAttribute('data-qty')
             }));
         });
-        localStorage.setItem('panel_mobile_db', JSON.stringify(currentData));
+        localStorage.setItem(dbName, JSON.stringify(currentData));
     }
 
-    // 6. 讀取本地快取
     function loadDataFromStorage() {
-        const savedDataStr = localStorage.getItem('panel_mobile_db');
+        const savedDataStr = localStorage.getItem(dbName);
         if (!savedDataStr) {
-            // 第一次打開網頁，預設塞入範例提供測試
-            document.getElementById('list-D2D101').appendChild(createMaterialElement('m_s1', '702ST9-A板', '12'));
-            document.getElementById('list-D2D101').appendChild(createMaterialElement('m_s2', '702ST9-B板', '8'));
+            document.getElementById('list-D2D101').appendChild(createMaterialElement('m_s1', '702ST9-範例A', '12'));
+            document.getElementById('list-D2D102').appendChild(createMaterialElement('m_s2', '702ST9-範例B', '8'));
             return;
         }
         const data = JSON.parse(savedDataStr);
         binIds.forEach(binId => {
             const container = document.getElementById(`list-${binId}`);
-            const itemsData = data[binId] || [];
-            itemsData.forEach(itemData => {
+            (data[binId] || []).forEach(itemData => {
                 container.appendChild(createMaterialElement(itemData.id, itemData.part, itemData.qty));
             });
         });
