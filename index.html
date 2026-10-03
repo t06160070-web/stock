@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
+    <title>倉儲現場專用版-系統板材管理</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 10px; }
+        h2 { color: #1e3a8a; font-size: 18px; text-align: center; margin: 5px 0; }
+        .form-panel { background: #fff; padding: 12px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .form-row { display: flex; gap: 8px; width: 100%; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .flex-grow { flex: 1; } 
+        .form-group label { font-weight: bold; color: #4b5563; font-size: 13px; }
+        .form-group input, .form-group select { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff; box-sizing: border-box; width: 100%; }
+        .btn-add { background: #2563eb; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; }
+        .storage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .storage-bin { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .bin-title { margin: 0 0 8px 0; padding-bottom: 6px; border-bottom: 2px solid #f3f4f6; color: #1f2937; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; }
+        .bin-count { color: #6b7280; font-size: 12px; font-weight: normal; }
+        .list-group { min-height: 40px; display: flex; flex-direction: column; gap: 6px; }
+        .material-item { background: #f9fafb; border: 1px solid #e5e7eb; border-left: 4px solid #2563eb; border-radius: 6px; padding: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .item-info { font-size: 13px; font-weight: bold; color: #374151; display: block; margin-bottom: 6px; word-break: break-all; }
+        .btn-group { display: flex; gap: 4px; justify-content: space-between; }
+        .btn-action { border: none; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: pointer; }
+        .btn-move { background: #e0e7ff; color: #4338ca; flex: 1; }
+        .btn-sort { background: #fef3c7; color: #d97706; }
+        .btn-delete { background: #fee2e2; color: #ef4444; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-box { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 300px; text-align: center; }
+        .modal-box h3 { margin-top: 0; font-size: 16px; color: #1f2937; }
+        .modal-box select { width: 100%; padding: 10px; margin: 15px 0; font-size: 15px; border-radius: 8px; border: 1px solid #cbd5e1; }
+        .modal-btns { display: flex; gap: 10px; }
+        .modal-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-confirm { background: #2563eb; color: white; }
+        .btn-cancel { background: #e5e7eb; color: #4b5563; }
+    </style>
+</head>
+<body>
+
+    <h2>🧱 系統板材儲位疊板管理 (現場專用)</h2>
+
+    <div class="form-panel">
+        <div class="form-row">
+            <div class="form-group flex-grow">
+                <label>料號</label>
+                <input type="text" id="input-part" value="702ST9">
+            </div>
+            <div class="form-group" style="max-width: 80px;">
+                <label>數量</label>
+                <input type="number" id="input-qty" value="10" min="1">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>初始儲位</label>
+            <select id="select-bin"></select>
+        </div>
+        <button class="btn-add" onclick="addNewMaterial()">➕ 新增板材至儲位</button>
+    </div>
+
+    <div class="storage-grid" id="storage-grid-container"></div>
+
+    <div class="modal-overlay" id="moveModal">
+        <div class="modal-box">
+            <h3 id="modalTitle">移動板材</h3>
+            <select id="modalSelectBin"></select>
+            <div class="modal-btns">
+                <button class="modal-btn btn-cancel" onclick="closeModal()">取消</button>
+                <button class="modal-btn btn-confirm" onclick="confirmMove()">確認移轉</button>
+            </div>
+        </div>
+    </div>
+<script>
+    const binIds = ['D2D101', 'D2D102', 'D2D103', 'D2D104', 'D2D105', 'D2D106', 'D2D107', 'D2D108', 'D2D109', 'D2D110'];
+    const dbName = 'panel_field_local_db';
+    let currentActiveItemId = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const mainContainer = document.getElementById('storage-grid-container');
+        const selectBin = document.getElementById('select-bin');
+        const modalSelectBin = document.getElementById('modalSelectBin');
+        
+        binIds.forEach(id => {
+            const opt1 = document.createElement('option'); opt1.value = id; opt1.textContent = id; selectBin.appendChild(opt1);
+            const opt2 = document.createElement('option'); opt2.value = id; opt2.textContent = id; modalSelectBin.appendChild(opt2);
+
+            const binDiv = document.createElement('div');
+            binDiv.className = 'storage-bin';
+            binDiv.innerHTML = `
+                <div class="bin-title">
+                    <span>📍 ${id}</span>
+                    <span class="bin-count" id="count-${id}">(0組)</span>
+                </div>
+                <div id="list-${id}" class="list-group"></div>
+            `;
+            mainContainer.appendChild(binDiv);
+        });
+
+        loadDataFromStorage();
+        updateAllBinCounts();
+    });
+
+    function createMaterialElement(id, partNo, qty) {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'material-item'; itemDiv.id = id;
+        itemDiv.setAttribute('data-part', partNo); itemDiv.setAttribute('data-qty', qty);
+        itemDiv.innerHTML = `
+            <span class="item-info">${partNo}<br><span style="color:#2563eb; font-size:12px;">量: ${qty}片</span></span>
+            <div class="btn-group">
+                <button class="btn-action btn-move" onclick="openMoveModal('${id}')">🚚移轉</button>
+                <button class="btn-action btn-sort" onclick="moveOrder('${id}', 'up')">🔼</button>
+                <button class="btn-action btn-sort" onclick="moveOrder('${id}', 'down')">🔽</button>
+                <button class="btn-action btn-delete" onclick="deleteItem('${id}')">❌</button>
+            </div>
+        `;
+        return itemDiv;
+    }
+
+    function addNewMaterial() {
+        const partInput = document.getElementById('input-part').value.trim();
+        const qtyInput = document.getElementById('input-qty').value.trim();
+        const targetBinId = document.getElementById('select-bin').value;
+        if (!partInput || !qtyInput) { alert('請輸入完整資訊！'); return; }
+        
+        const uniqueId = 'mat_' + Date.now();
+        document.getElementById(`list-${targetBinId}`).appendChild(createMaterialElement(uniqueId, partInput, qtyInput));
+        saveDataToStorage();
+        updateAllBinCounts();
+    }
+
+    function openMoveModal(id) {
+        currentActiveItemId = id;
+        const item = document.getElementById(id);
+        const currentBinId = item.parentElement.id.replace('list-', '');
+        document.getElementById('modalTitle').textContent = `移動此板材 (目前在 ${currentBinId})`;
+        document.getElementById('modalSelectBin').value = currentBinId;
+        document.getElementById('moveModal').style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('moveModal').style.display = 'none'; currentActiveItemId = null; }
+
+    function confirmMove() {
+        if (!currentActiveItemId) return;
+        const targetBinId = document.getElementById('modalSelectBin').value;
+        document.getElementById(`list-${targetBinId}`).appendChild(document.getElementById(currentActiveItemId));
+        closeModal(); saveDataToStorage(); updateAllBinCounts();
+    }
+
+    function moveOrder(id, direction) {
+        const item = document.getElementById(id); const parent = item.parentElement;
+        if (direction === 'up' && item.previousElementSibling) { parent.insertBefore(item, item.previousElementSibling); }
+        else if (direction === 'down' && item.nextElementSibling) { parent.insertBefore(item.nextElementSibling, item); }
+        saveDataToStorage();
+    }
+
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'moveModal') { closeModal(); }
+    });
+
+    function deleteItem(id) {
+        if(confirm('確定要出庫/移除此板材項目嗎？')) { document.getElementById(id).remove(); saveDataToStorage(); updateAllBinCounts(); }
+    }
+
+    function updateAllBinCounts() {
+        binIds.forEach(binId => {
+            const count = document.getElementById(`list-${binId}`).children.length;
+            document.getElementById(`count-${binId}`).textContent = `(${count}組)`;
+        });
+    }
+
+    function saveDataToStorage() {
+        const currentData = {};
+        binIds.forEach(binId => {
+            const container = document.getElementById(`list-${binId}`);
+            currentData[binId] = [...container.querySelectorAll('.material-item')].map(item => ({
+                id: item.id, part: item.getAttribute('data-part'), qty: item.getAttribute('data-qty')
+            }));
+        });
+        localStorage.setItem(dbName, JSON.stringify(currentData));
+    }
+
+    function loadDataFromStorage() {
+        const savedDataStr = localStorage.getItem(dbName);
+        if (!savedDataStr) {
+            document.getElementById('list-D2D101').appendChild(createMaterialElement('m1', '702ST9-棧板1', '10'));
+            document.getElementById('list-D2D101').appendChild(createMaterialElement('m2', '702ST9-棧板2', '15'));
+            return;
+        }
+        const data = JSON.parse(savedDataStr);
+        binIds.forEach(binId => {
+            const container = document.getElementById(`list-${binId}`);
+            if (container) {
+                (data[binId] || []).forEach(itemData => { container.appendChild(createMaterialElement(itemData.id, itemData.part, itemData.qty)); });
+            }
+        });
+    }
+</script>
+</body>
+</html>
