@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>倉儲現場專用版-系統板材管理</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-main: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-dark: #1f2937;
+            --text-muted: #6b7280;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", Roboto, sans-serif; 
+            background: var(--bg-main); 
+            margin: 0; 
+            padding: 10px; 
+            color: var(--text-dark);
+        }
+        h2 { color: #1e3a8a; font-size: 18px; text-align: center; margin: 5px 0 12px 0; }
+        
+        /* 表單區域 */
+        .form-panel { 
+            background: var(--card-bg); 
+            padding: 14px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); 
+            margin-bottom: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+        }
+        .form-row { display: flex; gap: 8px; width: 100%; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .flex-grow { flex: 1; } 
+        .form-group label { font-weight: 600; color: #4b5563; font-size: 13px; }
+        .form-group input, .form-group select { 
+            padding: 10px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            background: #fff; 
+            box-sizing: border-box; 
+            width: 100%; 
+            outline: none;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+        .btn-add { 
+            background: var(--primary); 
+            color: #fff; 
+            border: none; 
+            padding: 12px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            font-size: 15px; 
+            cursor: pointer; 
+            transition: background 0.2s;
+        }
+        .btn-add:active { background: var(--primary-hover); }
+
+        /* 儲位網格 */
+        .storage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        @media (max-width: 360px) { .storage-grid { grid-template-columns: 1fr; } }
+        
+        .storage-bin { 
+            background: var(--card-bg); 
+            border: 1px solid #e5e7eb; 
+            border-radius: 10px; 
+            padding: 10px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03); 
+            display: flex; 
+            flex-direction: column; 
+        }
+        .bin-title { 
+            margin: 0 0 8px 0; 
+            padding-bottom: 6px; 
+            border-bottom: 2px solid #f3f4f6; 
+            font-size: 14px; 
+            font-weight: bold; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        }
+        .bin-count { color: var(--text-muted); font-size: 11px; font-weight: normal; }
+        .list-group { min-height: 40px; display: flex; flex-direction: column; gap: 6px; }
+
+        /* 卡片與按鈕 */
+        .material-item { 
+            background: #f9fafb; 
+            border: 1px solid #e5e7eb; 
+            border-left: 4px solid var(--primary); 
+            border-radius: 6px; 
+            padding: 8px; 
+        }
+        .item-info { font-size: 13px; font-weight: bold; display: block; margin-bottom: 6px; word-break: break-all; }
+        .item-qty { color: var(--primary); font-size: 12px; margin-top: 2px; }
+        
+        .btn-group { display: flex; gap: 4px; }
+        .btn-action { 
+            border: none; 
+            padding: 6px 4px; 
+            border-radius: 4px; 
+            font-weight: bold; 
+            font-size: 12px; 
+            cursor: pointer; 
+            user-select: none;
+        }
+        .btn-move { background: #e0e7ff; color: #4338ca; flex: 2; }
+        .btn-sort { background: #fef3c7; color: #d97706; flex: 1; }
+        .btn-delete { background: #fee2e2; color: #ef4444; flex: 1; }
+
+        /* Modal 對話框 */
+        .modal-overlay { 
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.4); 
+            z-index: 1000; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        .modal-box { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 300px; text-align: center; }
+        .modal-box h3 { margin-top: 0; font-size: 16px; }
+        .modal-box select { width: 100%; padding: 10px; margin: 15px 0; font-size: 15px; border-radius: 8px; border: 1px solid #cbd5e1; }
+        .modal-btns { display: flex; gap: 10px; }
+        .modal-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-confirm { background: var(--primary); color: white; }
+        .btn-cancel { background: #e5e7eb; color: #4b5563; }
+    </style>
+</head>
+<body>
+
+    <h2>🧱 系統板材儲位疊板管理 (現場專用)</h2>
+
+    <div class="form-panel">
+        <div class="form-row">
+            <div class="form-group flex-grow">
+                <label for="input-part">料號</label>
+                <input type="text" id="input-part" value="702ST9" placeholder="請掃描或輸入料號">
+            </div>
+            <div class="form-group" style="width: 90px;">
+                <label for="input-qty">數量(片)</label>
+                <input type="number" id="input-qty" value="10" min="1">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="select-bin">初始儲位</label>
+            <select id="select-bin"></select>
+        </div>
+        <button class="btn-add" id="btn-add-item">➕ 新增板材至儲位</button>
+    </div>
+
+    <div class="storage-grid" id="storage-grid-container"></div>
+
+    <div class="modal-overlay" id="moveModal">
+        <div class="modal-box">
+            <h3 id="modalTitle">移動板材</h3>
+            <select id="modalSelectBin"></select>
+            <div class="modal-btns">
+                <button class="modal-btn btn-cancel" id="btn-modal-cancel">取消</button>
+                <button class="modal-btn btn-confirm" id="btn-modal-confirm">確認移轉</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const CONFIG = {
+        binIds: ['D2D101', 'D2D102', 'D2D103', 'D2D104', 'D2D105', 'D2D106', 'D2D107', 'D2D108', 'D2D109', 'D2D110'],
+        dbKey: 'panel_field_local_db'
+    };
+
+    // 全域狀態：以資料驅動 UI
+    let appState = {};
+    let activeMoveTarget = null; // 紀錄當前移動中的項 { binId, index }
+
+    // 初始化應用程式
+    window.addEventListener('DOMContentLoaded', () => {
+        initSelectOptions();
+        loadData();
+        renderAllBins();
+        bindEvents();
+    });
+
+    // 初始化下拉選單
+    function initSelectOptions() {
+        const selectBin = document.getElementById('select-bin');
+        const modalSelectBin = document.getElementById('modalSelectBin');
+        const fragment1 = document.createDocumentFragment();
+        const fragment2 = document.createDocumentFragment();
+
+        CONFIG.binIds.forEach(id => {
+            fragment1.appendChild(new Option(id, id));
+            fragment2.appendChild(new Option(id, id));
+        });
+
+        selectBin.appendChild(fragment1);
+        modalSelectBin.appendChild(fragment2);
+    }
+
+    // 載入 localStorage 資料
+    function loadData() {
+        const raw = localStorage.getItem(CONFIG.dbKey);
+        if (raw) {
+            try {
+                appState = JSON.parse(raw);
+            } catch (e) {
+                console.error("Data parse error", e);
+                appState = createEmptyState();
+            }
+        } else {
+            // 預設示範資料
+            appState = createEmptyState();
+            appState['D2D101'] = [
+                { id: 'm1', part: '702ST9-棧板1', qty: 10 },
+                { id: 'm2', part: '702ST9-棧板2', qty: 15 }
+            ];
+            saveData();
+        }
+    }
+
+    function createEmptyState() {
+        const state = {};
+        CONFIG.binIds.forEach(id => state[id] = []);
+        return state;
+    }
+
+    function saveData() {
+        localStorage.setItem(CONFIG.dbKey, JSON.stringify(appState));
+    }
+
+    // 渲染所有儲位
+    function renderAllBins() {
+        const container = document.getElementById('storage-grid-container');
+        container.innerHTML = '';
+
+        CONFIG.binIds.forEach(binId => {
+            const items = appState[binId] || [];
+            const totalQty = items.reduce((sum, item) => sum + Number(item.qty), 0);
+
+            const binDiv = document.createElement('div');
+            binDiv.className = 'storage-bin';
+            binDiv.dataset.bin = binId;
+
+            const itemsHtml = items.map((item, index) => `
+                <div class="material-item" data-index="${index}">
+                    <span class="item-info">
+                        ${escapeHtml(item.part)}
+                        <div class="item-qty">量: ${item.qty} 片</div>
+                    </span>
+                    <div class="btn-group">
+                        <button class="btn-action btn-move" data-act="move">🚚移轉</button>
+                        <button class="btn-action btn-sort" data-act="up">🔼</button>
+                        <button class="btn-action btn-sort" data-act="down">🔽</button>
+                        <button class="btn-action btn-delete" data-act="delete">❌</button>
+                    </div>
+                </div>
+            `).join('');
+
+            binDiv.innerHTML = `
+                <div class="bin-title">
+                    <span>📍 ${binId}</span>
+                    <span class="bin-count">(${items.length}組 / 共${totalQty}片)</span>
+                </div>
+                <div class="list-group">${itemsHtml}</div>
+            `;
+
+            container.appendChild(binDiv);
+        });
+    }
+
+    // 事件監聽集中管理（事件委派提升效能）
+    function bindEvents() {
+        document.getElementById('btn-add-item').addEventListener('click', addNewMaterial);
+
+        // 儲位區域點擊 (移轉、排序、刪除)
+        document.getElementById('storage-grid-container').addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-act]');
+            if (!btn) return;
+
+            const itemEl = btn.closest('.material-item');
+            const binEl = btn.closest('.storage-bin');
+            const binId = binEl.dataset.bin;
+            const index = parseInt(itemEl.dataset.index, 10);
+            const act = btn.dataset.act;
+
+            if (act === 'move') openMoveModal(binId, index);
+            else if (act === 'up') reorderItem(binId, index, -1);
+            else if (act === 'down') reorderItem(binId, index, 1);
+            else if (act === 'delete') deleteItem(binId, index);
+        });
+
+        // Modal 事件
+        document.getElementById('btn-modal-cancel').addEventListener('click', closeModal);
+        document.getElementById('btn-modal-confirm').addEventListener('click', confirmMove);
+        document.getElementById('moveModal').addEventListener('click', (e) => {
+            if (e.target.id === 'moveModal') closeModal();
+        });
+    }
+
+    // 新增板材
+    function addNewMaterial() {
+        const partInput = document.getElementById('input-part');
+        const qtyInput = document.getElementById('input-qty');
+        const selectBin = document.getElementById('select-bin');
+
+        const part = partInput.value.trim();
+        const qty = parseInt(qtyInput.value, 10);
+        const targetBin = selectBin.value;
+
+        if (!part || isNaN(qty) || qty <= 0) {
+            alert('請輸入正確的料號與數量！');
+            return;
+        }
+
+        const newItem = {
+            id: 'mat_' + Date.now(),
+            part: part,
+            qty: qty
+        };
+
+        if (!appState[targetBin]) appState[targetBin] = [];
+        appState[targetBin].push(newItem);
+
+        saveData();
+        renderAllBins();
+
+        // 現場優化：清空並自動 Focus 回料號欄位，方便槍刷連續輸入
+        partInput.value = '';
+        partInput.focus();
+    }
+
+    // 移動對話框控制
+    function openMoveModal(binId, index) {
+        activeMoveTarget = { binId, index };
+        const item = appState[binId][index];
+        document.getElementById('modalTitle').textContent = `移動 ${item.part} (原在 ${binId})`;
+        document.getElementById('modalSelectBin').value = binId;
+        document.getElementById('moveModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('moveModal').style.display = 'none';
+        activeMoveTarget = null;
+    }
+
+    function confirmMove() {
+        if (!activeMoveTarget) return;
+
+        const { binId: sourceBin, index } = activeMoveTarget;
+        const targetBin = document.getElementById('modalSelectBin').value;
+
+        if (sourceBin !== targetBin) {
+            // 從原儲位抽出，插入新儲位
+            const [movedItem] = appState[sourceBin].splice(index, 1);
+            appState[targetBin].push(movedItem);
+
+            saveData();
+            renderAllBins();
+        }
+
+        closeModal();
+    }
+
+    // 上下調整疊板順序
+    function reorderItem(binId, index, direction) {
+        const list = appState[binId];
+        const newIndex = index + direction;
+
+        if (newIndex < 0 || newIndex >= list.length) return; // 超出邊界不處理
+
+        // 位置對調
+        const temp = list[index];
+        list[index] = list[newIndex];
+        list[newIndex] = temp;
+
+        saveData();
+        renderAllBins();
+    }
+
+    // 刪除板材
+    function deleteItem(binId, index) {
+        const item = appState[binId][index];
+        if (confirm(`確定要出庫/移除 [${item.part}] 嗎？`)) {
+            appState[binId].splice(index, 1);
+            saveData();
+            renderAllBins();
+        }
+    }
+
+    // 工具：防止 XSS 攻擊
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&raw;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+</script>
+</body>
+</html>
