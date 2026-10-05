@@ -63,30 +63,38 @@
         .btn-add:active { background: var(--primary-hover); }
 
         /* 儲位網格 */
-        .storage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .storage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
         @media (max-width: 360px) { .storage-grid { grid-template-columns: 1fr; } }
         
         .storage-bin { 
             background: var(--card-bg); 
             border: 1px solid #e5e7eb; 
             border-radius: 10px; 
-            padding: 10px; 
+            padding: 0 10px 10px 10px; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.03); 
             display: flex; 
             flex-direction: column; 
         }
+        
+        /* 調整點 1：儲位標題置頂功能 (Sticky Header) */
         .bin-title { 
-            margin: 0 0 8px 0; 
-            padding-bottom: 6px; 
-            border-bottom: 2px solid #f3f4f6; 
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--card-bg);
+            margin: 0 -10px 8px -10px; 
+            padding: 10px 10px 6px 10px; 
+            border-bottom: 2px solid #e5e7eb; 
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
             font-size: 14px; 
             font-weight: bold; 
             display: flex; 
             justify-content: space-between; 
             align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
         .bin-count { color: var(--text-muted); font-size: 11px; font-weight: normal; }
-        .bin-count.over-limit { color: var(--danger); font-weight: bold; }
         .list-group { min-height: 40px; display: flex; flex-direction: column; gap: 6px; }
 
         /* 卡片與按鈕 */
@@ -146,7 +154,6 @@
             </div>
             <div class="form-group" style="width: 90px;">
                 <label for="input-qty">數量(片)</label>
-                <!-- 調整點 1: 預設數量改為 20 -->
                 <input type="number" id="input-qty" value="20" min="1">
             </div>
         </div>
@@ -174,7 +181,7 @@
     const CONFIG = {
         binIds: ['D2D101', 'D2D102', 'D2D103', 'D2D104', 'D2D105', 'D2D106', 'D2D107', 'D2D108', 'D2D109', 'D2D110'],
         dbKey: 'panel_field_local_db',
-        maxBinCapacity: 210 // 調整點 2: 設定儲位上限 210 片
+        maxBinCapacity: 210
     };
 
     let appState = {};
@@ -231,7 +238,6 @@
         localStorage.setItem(CONFIG.dbKey, JSON.stringify(appState));
     }
 
-    // 計算儲位目前的總片數
     function getBinTotalQty(binId) {
         return (appState[binId] || []).reduce((sum, item) => sum + Number(item.qty), 0);
     }
@@ -315,7 +321,6 @@
             return;
         }
 
-        // 容量上限檢查
         const currentQty = getBinTotalQty(targetBin);
         if (currentQty + qty > CONFIG.maxBinCapacity) {
             alert(`⚠️ 超過儲位容量上限！\n儲位 [${targetBin}] 目前已有 ${currentQty} 片，最多只能放入 ${CONFIG.maxBinCapacity - currentQty} 片。`);
@@ -329,14 +334,15 @@
         };
 
         if (!appState[targetBin]) appState[targetBin] = [];
-        appState[targetBin].push(newItem);
+        
+        // 調整點 2：改用 unshift，新增的項目會排在最上面 (第一筆)
+        appState[targetBin].unshift(newItem);
 
         saveData();
         renderAllBins();
 
-        // 復原現場預設值
         partInput.value = '';
-        qtyInput.value = 20; // 保持預設 20 片
+        qtyInput.value = 20;
         partInput.focus();
     }
 
@@ -363,14 +369,15 @@
             const movedItem = appState[sourceBin][index];
             const targetCurrentQty = getBinTotalQty(targetBin);
 
-            // 移轉容量上限檢查
             if (targetCurrentQty + Number(movedItem.qty) > CONFIG.maxBinCapacity) {
                 alert(`⚠️ 無法移轉！\n目標儲位 [${targetBin}] 目前已有 ${targetCurrentQty} 片，無法再放入 ${movedItem.qty} 片 (上限 ${CONFIG.maxBinCapacity} 片)。`);
                 return;
             }
 
             appState[sourceBin].splice(index, 1);
-            appState[targetBin].push(movedItem);
+            
+            // 移轉過來的項目同樣放到目標儲位的最頂端
+            appState[targetBin].unshift(movedItem);
 
             saveData();
             renderAllBins();
@@ -406,7 +413,7 @@
         return String(str)
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
+            .replace(/ >/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
