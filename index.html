@@ -206,12 +206,12 @@
 </head>
 <body>
 
-    <h2>🧱 系統板材儲位疊板管理 (自動完成選單版)</h2>
+    <h2>🧱 系統板材儲位疊板管理 (名稱排序版)</h2>
 
     <div class="form-panel">
         <!-- 管理料號庫提示列 -->
         <div class="quick-bar">
-            <span class="quick-bar-title">🔍 輸入關鍵字即可自動帶出下拉清單</span>
+            <span class="quick-bar-title">🔍 輸入關鍵字即可自動搜尋 (已依名稱排序)</span>
             <button class="btn-edit-quick" id="btn-open-manage-modal">⚙️ 管理料號庫</button>
         </div>
 
@@ -251,7 +251,7 @@
     <!-- 管理料號庫 Modal -->
     <div class="modal-overlay" id="manageModal">
         <div class="modal-box">
-            <h3>⚙️ 管理預設料號清單</h3>
+            <h3>⚙️ 管理預設料號清單 (A-Z 排序)</h3>
             <div class="form-group" style="margin-bottom: 8px;">
                 <input type="text" id="input-new-part" placeholder="輸入新常用料號">
             </div>
@@ -315,12 +315,16 @@
         }
     }
 
+    // 依據名稱順序排序料號清單
+    function sortPartList() {
+        partList.sort((a, b) => a.localeCompare(b, 'zh-Hant-TW', { numeric: true, sensitivity: 'base' }));
+    }
+
     function loadPartList() {
         const raw = localStorage.getItem(CONFIG.partDbKey);
         if (raw) {
             try { partList = JSON.parse(raw); } catch (e) { partList = []; }
         } else {
-            // 預設常見料號清單，輸入1~2字即可對應
             partList = [
                 '702ST9', 
                 '702ST9-棧板1', 
@@ -330,8 +334,9 @@
                 'W300-木紋板', 
                 'W300-黑橡木'
             ];
-            savePartList();
         }
+        sortPartList();
+        savePartList();
     }
 
     function createEmptyState() {
@@ -341,7 +346,10 @@
     }
 
     function saveData() { localStorage.setItem(CONFIG.dbKey, JSON.stringify(appState)); }
-    function savePartList() { localStorage.setItem(CONFIG.partDbKey, JSON.stringify(partList)); }
+    function savePartList() { 
+        sortPartList(); // 每次儲存前自動排序
+        localStorage.setItem(CONFIG.partDbKey, JSON.stringify(partList)); 
+    }
 
     function getBinTotalQty(binId) {
         return (appState[binId] || []).reduce((sum, item) => sum + Number(item.qty), 0);
@@ -386,7 +394,7 @@
         });
     }
 
-    // 更新 datalist 內容，供輸入框自動匹配
+    // 更新 datalist 內容 (會依照排序後的順序渲染)
     function renderDatalist() {
         const datalist = document.getElementById('part-datalist');
         datalist.innerHTML = '';
@@ -397,7 +405,7 @@
         });
     }
 
-    // 渲染管理視窗內部的清單
+    // 渲染管理視窗內部的清單 (同樣依排序顯示)
     function renderManageList() {
         const listContainer = document.getElementById('part-edit-list');
         listContainer.innerHTML = '';
@@ -485,11 +493,11 @@
 
         const currentQty = getBinTotalQty(targetBin);
         if (currentQty + qty > CONFIG.maxBinCapacity) {
-            alert(`⚠️ 超過儲位容量上限！\n儲位 [${targetBin}] 目前已有 ${currentQty} 片，最多只能放入 ${CONFIG.maxBinCapacity - currentQty} 片。`);
+            alert(`⚠️️ 超過儲位容量上限！\n儲位 [${targetBin}] 目前已有 ${currentQty} 片，最多只能放入 ${CONFIG.maxBinCapacity - currentQty} 片。`);
             return;
         }
 
-        // 如果輸入的新料號不在資料庫中，自動加入料號庫，方便下次輸入
+        // 如果輸入的新料號不在資料庫中，自動加入並重新排序
         if (!partList.includes(part)) {
             partList.push(part);
             savePartList();
