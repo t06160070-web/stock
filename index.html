@@ -35,20 +35,17 @@
             gap: 10px; 
         }
         
-        /* 快捷列樣式 */
+        /* 料號庫管理列 */
         .quick-bar {
             background: #f8fafc;
             border: 1px dashed #cbd5e1;
             padding: 8px 10px;
             border-radius: 8px;
             display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .quick-bar-header {
-            display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+        .quick-bar-title {
             font-size: 12px;
             font-weight: bold;
             color: #475569;
@@ -61,28 +58,6 @@
             cursor: pointer;
             padding: 0;
             text-decoration: underline;
-        }
-        .quick-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-        .chip-btn {
-            background: #e2e8f0;
-            color: #334155;
-            border: 1px solid #cbd5e1;
-            padding: 4px 8px;
-            border-radius: 16px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            user-select: none;
-            transition: all 0.15s;
-        }
-        .chip-btn:active {
-            background: var(--primary);
-            color: #fff;
-            border-color: var(--primary);
         }
 
         .form-row { display: flex; gap: 8px; width: 100%; }
@@ -100,6 +75,15 @@
             outline: none;
         }
         .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+        
+        /* 讓輸入框右側提示下拉圖示 */
+        #input-part {
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%236b7280" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 18px;
+        }
+
         .btn-add { 
             background: var(--primary); 
             color: #fff; 
@@ -127,7 +111,7 @@
             flex-direction: column; 
         }
         
-        /* 儲位標題置頂 (Sticky Header) */
+        /* 儲位標題置頂 */
         .bin-title { 
             position: sticky;
             top: 0;
@@ -184,25 +168,25 @@
             justify-content: center; 
             align-items: center; 
         }
-        .modal-box { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 300px; text-align: center; }
+        .modal-box { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; text-align: center; }
         .modal-box h3 { margin-top: 0; font-size: 16px; }
         .modal-box select { width: 100%; padding: 10px; margin: 15px 0; font-size: 15px; border-radius: 8px; border: 1px solid #cbd5e1; }
-        .modal-btns { display: flex; gap: 10px; }
+        .modal-btns { display: flex; gap: 10px; margin-top: 10px; }
         .modal-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-confirm { background: var(--primary); color: white; }
         .btn-cancel { background: #e5e7eb; color: #4b5563; }
 
-        /* 管理快捷鍵編輯視窗專用列表 */
-        .quick-edit-list {
+        /* 管理料號庫列表 */
+        .part-edit-list {
             display: flex;
             flex-direction: column;
             gap: 6px;
-            max-height: 150px;
+            max-height: 180px;
             overflow-y: auto;
             margin: 10px 0;
             text-align: left;
         }
-        .quick-edit-item {
+        .part-edit-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -211,7 +195,7 @@
             border-radius: 6px;
             font-size: 13px;
         }
-        .quick-edit-item button {
+        .part-edit-item button {
             background: none;
             border: none;
             color: var(--danger);
@@ -222,24 +206,23 @@
 </head>
 <body>
 
-    <h2>🧱 系統板材儲位疊板管理 (現場專用)</h2>
+    <h2>🧱 系統板材儲位疊板管理 (自動完成選單版)</h2>
 
     <div class="form-panel">
-        <!-- 快捷文字點選區域 -->
+        <!-- 管理料號庫提示列 -->
         <div class="quick-bar">
-            <div class="quick-bar-header">
-                <span>⚡ 常用料號快選</span>
-                <button class="btn-edit-quick" id="btn-open-quick-modal">⚙️ 編輯快捷鍵</button>
-            </div>
-            <div class="quick-chips" id="quick-chips-container"></div>
+            <span class="quick-bar-title">🔍 輸入關鍵字即可自動帶出下拉清單</span>
+            <button class="btn-edit-quick" id="btn-open-manage-modal">⚙️ 管理料號庫</button>
         </div>
 
         <div class="form-row">
             <div class="form-group flex-grow">
-                <label for="input-part">料號</label>
-                <input type="text" id="input-part" value="702ST9" placeholder="點選快捷或掃描料號">
+                <label for="input-part">料號 (支援關鍵字下拉)</label>
+                <!-- 綁定 datalist 實作自動完成 -->
+                <input type="text" id="input-part" list="part-datalist" placeholder="輸入1~2字自動搜尋..." autocomplete="off">
+                <datalist id="part-datalist"></datalist>
             </div>
-            <div class="form-group" style="width: 90px;">
+            <div class="form-group" style="width: 85px;">
                 <label for="input-qty">數量(片)</label>
                 <input type="number" id="input-qty" value="20" min="1">
             </div>
@@ -265,19 +248,19 @@
         </div>
     </div>
 
-    <!-- 編輯快捷鍵 Modal -->
-    <div class="modal-overlay" id="quickModal">
+    <!-- 管理料號庫 Modal -->
+    <div class="modal-overlay" id="manageModal">
         <div class="modal-box">
-            <h3>⚙️ 管理常用料號快捷鍵</h3>
+            <h3>⚙️ 管理預設料號清單</h3>
             <div class="form-group" style="margin-bottom: 8px;">
-                <input type="text" id="input-new-quick" placeholder="輸入常用料號">
+                <input type="text" id="input-new-part" placeholder="輸入新常用料號">
             </div>
-            <button class="btn-add" id="btn-add-quick" style="padding: 8px; font-size: 13px; width: 100%;">➕ 新增快捷鍵</button>
+            <button class="btn-add" id="btn-add-part-db" style="padding: 8px; font-size: 13px; width: 100%;">➕ 新增至下拉選單</button>
             
-            <div class="quick-edit-list" id="quick-edit-list"></div>
+            <div class="part-edit-list" id="part-edit-list"></div>
 
             <div class="modal-btns">
-                <button class="modal-btn btn-confirm" id="btn-close-quick-modal">完成</button>
+                <button class="modal-btn btn-confirm" id="btn-close-manage-modal">完成</button>
             </div>
         </div>
     </div>
@@ -286,20 +269,20 @@
     const CONFIG = {
         binIds: ['D2D101', 'D2D102', 'D2D103', 'D2D104', 'D2D105', 'D2D106', 'D2D107', 'D2D108', 'D2D109', 'D2D110'],
         dbKey: 'panel_field_local_db',
-        quickKey: 'panel_field_quick_tags',
+        partDbKey: 'panel_field_part_list',
         maxBinCapacity: 210
     };
 
     let appState = {};
-    let quickTags = [];
+    let partList = [];
     let activeMoveTarget = null;
 
     window.addEventListener('DOMContentLoaded', () => {
         initSelectOptions();
         loadData();
-        loadQuickTags();
+        loadPartList();
         renderAllBins();
-        renderQuickChips();
+        renderDatalist();
         bindEvents();
     });
 
@@ -321,11 +304,7 @@
     function loadData() {
         const raw = localStorage.getItem(CONFIG.dbKey);
         if (raw) {
-            try {
-                appState = JSON.parse(raw);
-            } catch (e) {
-                appState = createEmptyState();
-            }
+            try { appState = JSON.parse(raw); } catch (e) { appState = createEmptyState(); }
         } else {
             appState = createEmptyState();
             appState['D2D101'] = [
@@ -336,14 +315,22 @@
         }
     }
 
-    function loadQuickTags() {
-        const raw = localStorage.getItem(CONFIG.quickKey);
+    function loadPartList() {
+        const raw = localStorage.getItem(CONFIG.partDbKey);
         if (raw) {
-            try { quickTags = JSON.parse(raw); } catch (e) { quickTags = []; }
+            try { partList = JSON.parse(raw); } catch (e) { partList = []; }
         } else {
-            // 預設常見料號
-            quickTags = ['702ST9', '702ST9-棧板', 'ST10', 'W300'];
-            saveQuickTags();
+            // 預設常見料號清單，輸入1~2字即可對應
+            partList = [
+                '702ST9', 
+                '702ST9-棧板1', 
+                '702ST9-棧板2', 
+                'ST10-白色板', 
+                'ST10-灰色板', 
+                'W300-木紋板', 
+                'W300-黑橡木'
+            ];
+            savePartList();
         }
     }
 
@@ -354,7 +341,7 @@
     }
 
     function saveData() { localStorage.setItem(CONFIG.dbKey, JSON.stringify(appState)); }
-    function saveQuickTags() { localStorage.setItem(CONFIG.quickKey, JSON.stringify(quickTags)); }
+    function savePartList() { localStorage.setItem(CONFIG.partDbKey, JSON.stringify(partList)); }
 
     function getBinTotalQty(binId) {
         return (appState[binId] || []).reduce((sum, item) => sum + Number(item.qty), 0);
@@ -399,39 +386,28 @@
         });
     }
 
-    // 渲染快捷膠囊按鈕
-    function renderQuickChips() {
-        const container = document.getElementById('quick-chips-container');
-        container.innerHTML = '';
-
-        if (quickTags.length === 0) {
-            container.innerHTML = '<span style="font-size:12px; color:#94a3b8;">尚未新增快捷鍵</span>';
-            return;
-        }
-
-        quickTags.forEach(tag => {
-            const btn = document.createElement('button');
-            btn.className = 'chip-btn';
-            btn.textContent = tag;
-            btn.onclick = () => {
-                document.getElementById('input-part').value = tag;
-                document.getElementById('input-part').focus();
-            };
-            container.appendChild(btn);
+    // 更新 datalist 內容，供輸入框自動匹配
+    function renderDatalist() {
+        const datalist = document.getElementById('part-datalist');
+        datalist.innerHTML = '';
+        partList.forEach(part => {
+            const option = document.createElement('option');
+            option.value = part;
+            datalist.appendChild(option);
         });
     }
 
-    // 渲染編輯視窗內的清單
-    function renderQuickEditList() {
-        const listContainer = document.getElementById('quick-edit-list');
+    // 渲染管理視窗內部的清單
+    function renderManageList() {
+        const listContainer = document.getElementById('part-edit-list');
         listContainer.innerHTML = '';
 
-        quickTags.forEach((tag, index) => {
+        partList.forEach((part, index) => {
             const item = document.createElement('div');
-            item.className = 'quick-edit-item';
+            item.className = 'part-edit-item';
             item.innerHTML = `
-                <span>${escapeHtml(tag)}</span>
-                <button onclick="removeQuickTag(${index})">✕ 刪除</button>
+                <span>${escapeHtml(part)}</span>
+                <button onclick="removePartFromDb(${index})">✕ 刪除</button>
             `;
             listContainer.appendChild(item);
         });
@@ -463,34 +439,34 @@
             if (e.target.id === 'moveModal') closeModal();
         });
 
-        // 快捷鍵 Modal 事件
-        document.getElementById('btn-open-quick-modal').addEventListener('click', () => {
-            renderQuickEditList();
-            document.getElementById('quickModal').style.display = 'flex';
+        // 管理料號庫 Modal 事件
+        document.getElementById('btn-open-manage-modal').addEventListener('click', () => {
+            renderManageList();
+            document.getElementById('manageModal').style.display = 'flex';
         });
-        document.getElementById('btn-close-quick-modal').addEventListener('click', () => {
-            document.getElementById('quickModal').style.display = 'none';
+        document.getElementById('btn-close-manage-modal').addEventListener('click', () => {
+            document.getElementById('manageModal').style.display = 'none';
         });
-        document.getElementById('btn-add-quick').addEventListener('click', addQuickTag);
+        document.getElementById('btn-add-part-db').addEventListener('click', addPartToDb);
     }
 
-    function addQuickTag() {
-        const input = document.getElementById('input-new-quick');
+    function addPartToDb() {
+        const input = document.getElementById('input-new-part');
         const val = input.value.trim();
-        if (val && !quickTags.includes(val)) {
-            quickTags.push(val);
-            saveQuickTags();
-            renderQuickChips();
-            renderQuickEditList();
+        if (val && !partList.includes(val)) {
+            partList.push(val);
+            savePartList();
+            renderDatalist();
+            renderManageList();
             input.value = '';
         }
     }
 
-    window.removeQuickTag = function(index) {
-        quickTags.splice(index, 1);
-        saveQuickTags();
-        renderQuickChips();
-        renderQuickEditList();
+    window.removePartFromDb = function(index) {
+        partList.splice(index, 1);
+        savePartList();
+        renderDatalist();
+        renderManageList();
     };
 
     function addNewMaterial() {
@@ -511,6 +487,13 @@
         if (currentQty + qty > CONFIG.maxBinCapacity) {
             alert(`⚠️ 超過儲位容量上限！\n儲位 [${targetBin}] 目前已有 ${currentQty} 片，最多只能放入 ${CONFIG.maxBinCapacity - currentQty} 片。`);
             return;
+        }
+
+        // 如果輸入的新料號不在資料庫中，自動加入料號庫，方便下次輸入
+        if (!partList.includes(part)) {
+            partList.push(part);
+            savePartList();
+            renderDatalist();
         }
 
         const newItem = {
