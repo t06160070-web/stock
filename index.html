@@ -509,4 +509,96 @@
 
         const currentQty = getBinTotalQty(targetBin);
         if (currentQty + qty > CONFIG.maxBinCapacity) {
-            alert(`⚠️ 超過儲位容量上限！\
+            alert(`⚠️ 超過儲位容量上限！\n儲位 [${targetBin}] 目前已有 ${currentQty} 片，最多只能放入 ${CONFIG.maxBinCapacity - currentQty} 片。`);
+            return;
+        }
+
+        const newItem = {
+            id: 'mat_' + Date.now(),
+            part: part,
+            qty: qty
+        };
+
+        if (!appState[targetBin]) appState[targetBin] = [];
+        appState[targetBin].unshift(newItem); // 由上新增
+
+        saveData();
+        renderAllBins();
+
+        partInput.value = '';
+        qtyInput.value = 20;
+        partInput.focus();
+    }
+
+    function openMoveModal(binId, index) {
+        activeMoveTarget = { binId, index };
+        const item = appState[binId][index];
+        document.getElementById('modalTitle').textContent = `移動 ${item.part} (${item.qty}片)`;
+        document.getElementById('modalSelectBin').value = binId;
+        document.getElementById('moveModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('moveModal').style.display = 'none';
+        activeMoveTarget = null;
+    }
+
+    function confirmMove() {
+        if (!activeMoveTarget) return;
+
+        const { binId: sourceBin, index } = activeMoveTarget;
+        const targetBin = document.getElementById('modalSelectBin').value;
+
+        if (sourceBin !== targetBin) {
+            const movedItem = appState[sourceBin][index];
+            const targetCurrentQty = getBinTotalQty(targetBin);
+
+            if (targetCurrentQty + Number(movedItem.qty) > CONFIG.maxBinCapacity) {
+                alert(`⚠️ 無法移轉！\n目標儲位 [${targetBin}] 目前已有 ${targetCurrentQty} 片，無法再放入 ${movedItem.qty} 片 (上限 ${CONFIG.maxBinCapacity} 片)。`);
+                return;
+            }
+
+            appState[sourceBin].splice(index, 1);
+            appState[targetBin].unshift(movedItem);
+
+            saveData();
+            renderAllBins();
+        }
+
+        closeModal();
+    }
+
+    function reorderItem(binId, index, direction) {
+        const list = appState[binId];
+        const newIndex = index + direction;
+
+        if (newIndex < 0 || newIndex >= list.length) return;
+
+        const temp = list[index];
+        list[index] = list[newIndex];
+        list[newIndex] = temp;
+
+        saveData();
+        renderAllBins();
+    }
+
+    function deleteItem(binId, index) {
+        const item = appState[binId][index];
+        if (confirm(`確定要出庫/移除 [${item.part}] 嗎？`)) {
+            appState[binId].splice(index, 1);
+            saveData();
+            renderAllBins();
+        }
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+</script>
+</body>
+</html>
