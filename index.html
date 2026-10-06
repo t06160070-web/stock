@@ -34,6 +34,57 @@
             flex-direction: column; 
             gap: 10px; 
         }
+        
+        /* 快捷列樣式 */
+        .quick-bar {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            padding: 8px 10px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .quick-bar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #475569;
+        }
+        .btn-edit-quick {
+            background: none;
+            border: none;
+            color: #2563eb;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+        }
+        .quick-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .chip-btn {
+            background: #e2e8f0;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+            padding: 4px 8px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s;
+        }
+        .chip-btn:active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
         .form-row { display: flex; gap: 8px; width: 100%; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .flex-grow { flex: 1; } 
@@ -76,7 +127,7 @@
             flex-direction: column; 
         }
         
-        /* 調整點 1：儲位標題置頂功能 (Sticky Header) */
+        /* 儲位標題置頂 (Sticky Header) */
         .bin-title { 
             position: sticky;
             top: 0;
@@ -140,6 +191,33 @@
         .modal-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-confirm { background: var(--primary); color: white; }
         .btn-cancel { background: #e5e7eb; color: #4b5563; }
+
+        /* 管理快捷鍵編輯視窗專用列表 */
+        .quick-edit-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin: 10px 0;
+            text-align: left;
+        }
+        .quick-edit-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .quick-edit-item button {
+            background: none;
+            border: none;
+            color: var(--danger);
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -147,10 +225,19 @@
     <h2>🧱 系統板材儲位疊板管理 (現場專用)</h2>
 
     <div class="form-panel">
+        <!-- 快捷文字點選區域 -->
+        <div class="quick-bar">
+            <div class="quick-bar-header">
+                <span>⚡ 常用料號快選</span>
+                <button class="btn-edit-quick" id="btn-open-quick-modal">⚙️ 編輯快捷鍵</button>
+            </div>
+            <div class="quick-chips" id="quick-chips-container"></div>
+        </div>
+
         <div class="form-row">
             <div class="form-group flex-grow">
                 <label for="input-part">料號</label>
-                <input type="text" id="input-part" value="702ST9" placeholder="請掃描或輸入料號">
+                <input type="text" id="input-part" value="702ST9" placeholder="點選快捷或掃描料號">
             </div>
             <div class="form-group" style="width: 90px;">
                 <label for="input-qty">數量(片)</label>
@@ -166,6 +253,7 @@
 
     <div class="storage-grid" id="storage-grid-container"></div>
 
+    <!-- 儲位移轉 Modal -->
     <div class="modal-overlay" id="moveModal">
         <div class="modal-box">
             <h3 id="modalTitle">移動板材</h3>
@@ -177,20 +265,41 @@
         </div>
     </div>
 
+    <!-- 編輯快捷鍵 Modal -->
+    <div class="modal-overlay" id="quickModal">
+        <div class="modal-box">
+            <h3>⚙️ 管理常用料號快捷鍵</h3>
+            <div class="form-group" style="margin-bottom: 8px;">
+                <input type="text" id="input-new-quick" placeholder="輸入常用料號">
+            </div>
+            <button class="btn-add" id="btn-add-quick" style="padding: 8px; font-size: 13px; width: 100%;">➕ 新增快捷鍵</button>
+            
+            <div class="quick-edit-list" id="quick-edit-list"></div>
+
+            <div class="modal-btns">
+                <button class="modal-btn btn-confirm" id="btn-close-quick-modal">完成</button>
+            </div>
+        </div>
+    </div>
+
 <script>
     const CONFIG = {
         binIds: ['D2D101', 'D2D102', 'D2D103', 'D2D104', 'D2D105', 'D2D106', 'D2D107', 'D2D108', 'D2D109', 'D2D110'],
         dbKey: 'panel_field_local_db',
+        quickKey: 'panel_field_quick_tags',
         maxBinCapacity: 210
     };
 
     let appState = {};
+    let quickTags = [];
     let activeMoveTarget = null;
 
     window.addEventListener('DOMContentLoaded', () => {
         initSelectOptions();
         loadData();
+        loadQuickTags();
         renderAllBins();
+        renderQuickChips();
         bindEvents();
     });
 
@@ -215,7 +324,6 @@
             try {
                 appState = JSON.parse(raw);
             } catch (e) {
-                console.error("Data parse error", e);
                 appState = createEmptyState();
             }
         } else {
@@ -228,15 +336,25 @@
         }
     }
 
+    function loadQuickTags() {
+        const raw = localStorage.getItem(CONFIG.quickKey);
+        if (raw) {
+            try { quickTags = JSON.parse(raw); } catch (e) { quickTags = []; }
+        } else {
+            // 預設常見料號
+            quickTags = ['702ST9', '702ST9-棧板', 'ST10', 'W300'];
+            saveQuickTags();
+        }
+    }
+
     function createEmptyState() {
         const state = {};
         CONFIG.binIds.forEach(id => state[id] = []);
         return state;
     }
 
-    function saveData() {
-        localStorage.setItem(CONFIG.dbKey, JSON.stringify(appState));
-    }
+    function saveData() { localStorage.setItem(CONFIG.dbKey, JSON.stringify(appState)); }
+    function saveQuickTags() { localStorage.setItem(CONFIG.quickKey, JSON.stringify(quickTags)); }
 
     function getBinTotalQty(binId) {
         return (appState[binId] || []).reduce((sum, item) => sum + Number(item.qty), 0);
@@ -281,6 +399,44 @@
         });
     }
 
+    // 渲染快捷膠囊按鈕
+    function renderQuickChips() {
+        const container = document.getElementById('quick-chips-container');
+        container.innerHTML = '';
+
+        if (quickTags.length === 0) {
+            container.innerHTML = '<span style="font-size:12px; color:#94a3b8;">尚未新增快捷鍵</span>';
+            return;
+        }
+
+        quickTags.forEach(tag => {
+            const btn = document.createElement('button');
+            btn.className = 'chip-btn';
+            btn.textContent = tag;
+            btn.onclick = () => {
+                document.getElementById('input-part').value = tag;
+                document.getElementById('input-part').focus();
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    // 渲染編輯視窗內的清單
+    function renderQuickEditList() {
+        const listContainer = document.getElementById('quick-edit-list');
+        listContainer.innerHTML = '';
+
+        quickTags.forEach((tag, index) => {
+            const item = document.createElement('div');
+            item.className = 'quick-edit-item';
+            item.innerHTML = `
+                <span>${escapeHtml(tag)}</span>
+                <button onclick="removeQuickTag(${index})">✕ 刪除</button>
+            `;
+            listContainer.appendChild(item);
+        });
+    }
+
     function bindEvents() {
         document.getElementById('btn-add-item').addEventListener('click', addNewMaterial);
 
@@ -300,12 +456,42 @@
             else if (act === 'delete') deleteItem(binId, index);
         });
 
+        // 移轉 Modal 事件
         document.getElementById('btn-modal-cancel').addEventListener('click', closeModal);
         document.getElementById('btn-modal-confirm').addEventListener('click', confirmMove);
         document.getElementById('moveModal').addEventListener('click', (e) => {
             if (e.target.id === 'moveModal') closeModal();
         });
+
+        // 快捷鍵 Modal 事件
+        document.getElementById('btn-open-quick-modal').addEventListener('click', () => {
+            renderQuickEditList();
+            document.getElementById('quickModal').style.display = 'flex';
+        });
+        document.getElementById('btn-close-quick-modal').addEventListener('click', () => {
+            document.getElementById('quickModal').style.display = 'none';
+        });
+        document.getElementById('btn-add-quick').addEventListener('click', addQuickTag);
     }
+
+    function addQuickTag() {
+        const input = document.getElementById('input-new-quick');
+        const val = input.value.trim();
+        if (val && !quickTags.includes(val)) {
+            quickTags.push(val);
+            saveQuickTags();
+            renderQuickChips();
+            renderQuickEditList();
+            input.value = '';
+        }
+    }
+
+    window.removeQuickTag = function(index) {
+        quickTags.splice(index, 1);
+        saveQuickTags();
+        renderQuickChips();
+        renderQuickEditList();
+    };
 
     function addNewMaterial() {
         const partInput = document.getElementById('input-part');
@@ -323,100 +509,4 @@
 
         const currentQty = getBinTotalQty(targetBin);
         if (currentQty + qty > CONFIG.maxBinCapacity) {
-            alert(`⚠️ 超過儲位容量上限！\n儲位 [${targetBin}] 目前已有 ${currentQty} 片，最多只能放入 ${CONFIG.maxBinCapacity - currentQty} 片。`);
-            return;
-        }
-
-        const newItem = {
-            id: 'mat_' + Date.now(),
-            part: part,
-            qty: qty
-        };
-
-        if (!appState[targetBin]) appState[targetBin] = [];
-        
-        // 調整點 2：改用 unshift，新增的項目會排在最上面 (第一筆)
-        appState[targetBin].unshift(newItem);
-
-        saveData();
-        renderAllBins();
-
-        partInput.value = '';
-        qtyInput.value = 20;
-        partInput.focus();
-    }
-
-    function openMoveModal(binId, index) {
-        activeMoveTarget = { binId, index };
-        const item = appState[binId][index];
-        document.getElementById('modalTitle').textContent = `移動 ${item.part} (${item.qty}片)`;
-        document.getElementById('modalSelectBin').value = binId;
-        document.getElementById('moveModal').style.display = 'flex';
-    }
-
-    function closeModal() {
-        document.getElementById('moveModal').style.display = 'none';
-        activeMoveTarget = null;
-    }
-
-    function confirmMove() {
-        if (!activeMoveTarget) return;
-
-        const { binId: sourceBin, index } = activeMoveTarget;
-        const targetBin = document.getElementById('modalSelectBin').value;
-
-        if (sourceBin !== targetBin) {
-            const movedItem = appState[sourceBin][index];
-            const targetCurrentQty = getBinTotalQty(targetBin);
-
-            if (targetCurrentQty + Number(movedItem.qty) > CONFIG.maxBinCapacity) {
-                alert(`⚠️ 無法移轉！\n目標儲位 [${targetBin}] 目前已有 ${targetCurrentQty} 片，無法再放入 ${movedItem.qty} 片 (上限 ${CONFIG.maxBinCapacity} 片)。`);
-                return;
-            }
-
-            appState[sourceBin].splice(index, 1);
-            
-            // 移轉過來的項目同樣放到目標儲位的最頂端
-            appState[targetBin].unshift(movedItem);
-
-            saveData();
-            renderAllBins();
-        }
-
-        closeModal();
-    }
-
-    function reorderItem(binId, index, direction) {
-        const list = appState[binId];
-        const newIndex = index + direction;
-
-        if (newIndex < 0 || newIndex >= list.length) return;
-
-        const temp = list[index];
-        list[index] = list[newIndex];
-        list[newIndex] = temp;
-
-        saveData();
-        renderAllBins();
-    }
-
-    function deleteItem(binId, index) {
-        const item = appState[binId][index];
-        if (confirm(`確定要出庫/移除 [${item.part}] 嗎？`)) {
-            appState[binId].splice(index, 1);
-            saveData();
-            renderAllBins();
-        }
-    }
-
-    function escapeHtml(str) {
-        return String(str)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/ >/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-</script>
-</body>
-</html>
+            alert(`⚠️ 超過儲位容量上限！\
