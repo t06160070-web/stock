@@ -218,8 +218,8 @@
         <div class="form-row">
             <div class="form-group flex-grow">
                 <label for="input-part">料號 (支援關鍵字下拉)</label>
-                <!-- 預設英文輸入鍵盤，不強制轉換大寫 -->
-                <input type="text" id="input-part" list="part-datalist" placeholder="輸入1~2字自動搜尋..." autocomplete="off">
+                <!-- 修正：加入相容手機輸入法的防自動大寫與拼字校正屬性 -->
+                <input type="text" id="input-part" list="part-datalist" placeholder="輸入1~2字自動搜尋..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
                 <datalist id="part-datalist"></datalist>
             </div>
             <div class="form-group" style="width: 85px;">
@@ -253,7 +253,7 @@
         <div class="modal-box">
             <h3>⚙️ 管理預設料號清單 (名稱排序)</h3>
             <div class="form-group" style="margin-bottom: 8px;">
-                <input type="text" id="input-new-part" placeholder="輸入新常用料號">
+                <input type="text" id="input-new-part" placeholder="輸入新常用料號" autocapitalize="none" autocorrect="off" spellcheck="false">
             </div>
             <button class="btn-add" id="btn-add-part-db" style="padding: 8px; font-size: 13px; width: 100%;">➕ 新增至下拉選單</button>
             
