@@ -13,6 +13,7 @@
             --text-dark: #1f2937;
             --text-muted: #6b7280;
             --danger: #ef4444;
+            --success: #10b981;
         }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", Roboto, sans-serif; 
@@ -177,7 +178,7 @@
         .btn-confirm { background: var(--primary); color: white; }
         .btn-cancel { background: #e5e7eb; color: #4b5563; }
 
-        /* 管理料號庫列表 */
+        /* 管理料號庫列表與匯入匯出按鈕 */
         .part-edit-list {
             display: flex;
             flex-direction: column;
@@ -203,6 +204,25 @@
             font-weight: bold;
             cursor: pointer;
         }
+        .io-btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #e2e8f0;
+        }
+        .btn-io {
+            flex: 1;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #f8fafc;
+            color: #334155;
+            cursor: pointer;
+        }
+        .btn-io:active { background: #e2e8f0; }
     </style>
 </head>
 <body>
@@ -210,7 +230,7 @@
     <h2>🧱 系統板材儲位疊板管理 (現場實用版)</h2>
 
     <div class="form-panel">
-        <!-- 管理料號庫提示列 (加上數量顯示) -->
+        <!-- 管理料號庫提示列 -->
         <div class="quick-bar">
             <span class="quick-bar-title">🔍 輸入關鍵字即可自動搜尋</span>
             <button class="btn-edit-quick" id="btn-open-manage-modal">⚙️ 管理料號庫 (<span id="part-count-badge">0</span>)</button>
@@ -219,7 +239,6 @@
         <div class="form-row">
             <div class="form-group flex-grow">
                 <label for="input-part">料號 (支援關鍵字下拉)</label>
-                <!-- 設定 type="url" 或相容屬性，優化手機彈出英文鍵盤與防自動大寫 -->
                 <input type="url" id="input-part" list="part-datalist" placeholder="輸入1~2字自動搜尋..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
                 <datalist id="part-datalist"></datalist>
             </div>
@@ -249,7 +268,7 @@
         </div>
     </div>
 
-    <!-- 管理料號庫 Modal (顯示料號總數) -->
+    <!-- 管理料號庫 Modal (包含匯入/匯出) -->
     <div class="modal-overlay" id="manageModal">
         <div class="modal-box">
             <h3>⚙️ 預設料號清單 (共 <span id="modal-part-count" style="color:#2563eb;">0</span> 個)</h3>
@@ -259,6 +278,13 @@
             <button class="btn-add" id="btn-add-part-db" style="padding: 8px; font-size: 13px; width: 100%;">➕ 新增至下拉選單</button>
             
             <div class="part-edit-list" id="part-edit-list"></div>
+
+            <!-- 匯入與匯出按鈕區塊 -->
+            <div class="io-btn-group">
+                <button class="btn-io" id="btn-export-parts">📥 匯出料號檔</button>
+                <button class="btn-io" id="btn-import-parts">📤 匯入料號檔</button>
+                <input type="file" id="input-file-import" accept=".json" style="display: none;">
+            </div>
 
             <div class="modal-btns">
                 <button class="modal-btn btn-confirm" id="btn-close-manage-modal">完成</button>
@@ -316,7 +342,6 @@
         }
     }
 
-    // 依據名稱筆畫與數字順序排序料號清單
     function sortPartList() {
         partList.sort((a, b) => a.localeCompare(b, 'zh-Hant-TW', { numeric: true, sensitivity: 'base' }));
     }
@@ -351,10 +376,9 @@
     function savePartList() { 
         sortPartList();
         localStorage.setItem(CONFIG.partDbKey, JSON.stringify(partList)); 
-        updatePartCountUI(); // 更新畫面上顯示的數量
+        updatePartCountUI();
     }
 
-    // 更新料號總數顯示
     function updatePartCountUI() {
         const count = partList.length;
         document.getElementById('part-count-badge').textContent = count;
@@ -466,6 +490,59 @@
             document.getElementById('manageModal').style.display = 'none';
         });
         document.getElementById('btn-add-part-db').addEventListener('click', addPartToDb);
+
+        // 匯入 / 匯出事件
+        document.getElementById('btn-export-parts').addEventListener('click', exportPartsToJson);
+        document.getElementById('btn-import-parts').addEventListener('click', () => {
+            document.getElementById('input-file-import').click();
+        });
+        document.getElementById('input-file-import').addEventListener('change', importPartsFromJson);
+    }
+
+    /* 📥 匯出料號清單成 JSON 檔案 */
+    function exportPartsToJson() {
+        if (partList.length === 0) {
+            alert('目前沒有料號可供匯出！');
+            return;
+        }
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(partList, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `預設料號清單_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    /* 📤 從 JSON 檔案匯入料號清單 */
+    function importPartsFromJson(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const imported = JSON.parse(evt.target.result);
+                if (Array.isArray(imported)) {
+                    // 合併舊料號與新料號，並去除重複
+                    const merged = Array.from(new Set([...partList, ...imported.map(item => String(item).trim())]));
+                    const addedCount = merged.length - partList.length;
+
+                    partList = merged;
+                    savePartList();
+                    renderDatalist();
+                    renderManageList();
+
+                    alert(`🎉 成功匯入料號！\n新增了 ${addedCount} 個新料號，目前共有 ${partList.length} 個料號。`);
+                } else {
+                    alert('⚠️ 匯入失敗：檔案格式不符合陣列格式！');
+                }
+            } catch (err) {
+                alert('⚠️ 匯入失敗：無法解析 JSON 檔案內容！');
+            }
+            e.target.value = ''; // 清空選擇器以利再次選擇
+        };
+        reader.readAsText(file);
     }
 
     function addPartToDb() {
@@ -507,7 +584,6 @@
             return;
         }
 
-        // 輸入新料號時自動加入選單庫並重新排序
         if (!partList.includes(part)) {
             partList.push(part);
             savePartList();
@@ -521,7 +597,7 @@
         };
 
         if (!appState[targetBin]) appState[targetBin] = [];
-        appState[targetBin].unshift(newItem); // 由上新增
+        appState[targetBin].unshift(newItem);
 
         saveData();
         renderAllBins();
