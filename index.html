@@ -58,6 +58,7 @@
             cursor: pointer;
             padding: 0;
             text-decoration: underline;
+            font-weight: bold;
         }
 
         .form-row { display: flex; gap: 8px; width: 100%; }
@@ -169,7 +170,7 @@
             align-items: center; 
         }
         .modal-box { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 320px; text-align: center; }
-        .modal-box h3 { margin-top: 0; font-size: 16px; }
+        .modal-box h3 { margin-top: 0; font-size: 15px; }
         .modal-box select { width: 100%; padding: 10px; margin: 15px 0; font-size: 15px; border-radius: 8px; border: 1px solid #cbd5e1; }
         .modal-btns { display: flex; gap: 10px; margin-top: 10px; }
         .modal-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
@@ -209,17 +210,17 @@
     <h2>🧱 系統板材儲位疊板管理 (現場實用版)</h2>
 
     <div class="form-panel">
-        <!-- 管理料號庫提示列 -->
+        <!-- 管理料號庫提示列 (加上數量顯示) -->
         <div class="quick-bar">
-            <span class="quick-bar-title">🔍 輸入關鍵字即可自動搜尋 (已依名稱排序)</span>
-            <button class="btn-edit-quick" id="btn-open-manage-modal">⚙️ 管理料號庫</button>
+            <span class="quick-bar-title">🔍 輸入關鍵字即可自動搜尋</span>
+            <button class="btn-edit-quick" id="btn-open-manage-modal">⚙️ 管理料號庫 (<span id="part-count-badge">0</span>)</button>
         </div>
 
         <div class="form-row">
             <div class="form-group flex-grow">
                 <label for="input-part">料號 (支援關鍵字下拉)</label>
-                <!-- 修正：加入相容手機輸入法的防自動大寫與拼字校正屬性 -->
-                <input type="text" id="input-part" list="part-datalist" placeholder="輸入1~2字自動搜尋..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+                <!-- 設定 type="url" 或相容屬性，優化手機彈出英文鍵盤與防自動大寫 -->
+                <input type="url" id="input-part" list="part-datalist" placeholder="輸入1~2字自動搜尋..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
                 <datalist id="part-datalist"></datalist>
             </div>
             <div class="form-group" style="width: 85px;">
@@ -248,12 +249,12 @@
         </div>
     </div>
 
-    <!-- 管理料號庫 Modal -->
+    <!-- 管理料號庫 Modal (顯示料號總數) -->
     <div class="modal-overlay" id="manageModal">
         <div class="modal-box">
-            <h3>⚙️ 管理預設料號清單 (名稱排序)</h3>
+            <h3>⚙️ 預設料號清單 (共 <span id="modal-part-count" style="color:#2563eb;">0</span> 個)</h3>
             <div class="form-group" style="margin-bottom: 8px;">
-                <input type="text" id="input-new-part" placeholder="輸入新常用料號" autocapitalize="none" autocorrect="off" spellcheck="false">
+                <input type="url" id="input-new-part" placeholder="輸入新常用料號" autocapitalize="none" autocorrect="off" spellcheck="false">
             </div>
             <button class="btn-add" id="btn-add-part-db" style="padding: 8px; font-size: 13px; width: 100%;">➕ 新增至下拉選單</button>
             
@@ -346,9 +347,18 @@
     }
 
     function saveData() { localStorage.setItem(CONFIG.dbKey, JSON.stringify(appState)); }
+    
     function savePartList() { 
         sortPartList();
         localStorage.setItem(CONFIG.partDbKey, JSON.stringify(partList)); 
+        updatePartCountUI(); // 更新畫面上顯示的數量
+    }
+
+    // 更新料號總數顯示
+    function updatePartCountUI() {
+        const count = partList.length;
+        document.getElementById('part-count-badge').textContent = count;
+        document.getElementById('modal-part-count').textContent = count;
     }
 
     function getBinTotalQty(binId) {
@@ -402,6 +412,7 @@
             option.value = part;
             datalist.appendChild(option);
         });
+        updatePartCountUI();
     }
 
     function renderManageList() {
@@ -417,6 +428,7 @@
             `;
             listContainer.appendChild(item);
         });
+        updatePartCountUI();
     }
 
     function bindEvents() {
